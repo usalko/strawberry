@@ -197,3 +197,6 @@ $RECYCLE.BIN/
 .vscode/
 .idea/
 node_modules/
+
+# Venv pip installation script
+.pip

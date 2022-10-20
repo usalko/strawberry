@@ -1,0 +1,191 @@
+#!/bin/bash
+
+PYTHON_VERSION=3.9
+PYTHON=python$PYTHON_VERSION
+# CHECK PYTHON 3
+if command -v $PYTHON &>/dev/null; then
+    echo Python3 available
+else
+    echo Python3 not available, please install it or add to the PATH variable
+    exit 1
+fi
+
+# CHECK PIP
+if command -v $PYTHON -m pip &>/dev/null; then
+    echo Pip available
+else
+    echo Pip not available, please install it or add to the PATH variable
+    exit 1
+fi
+
+# CHECK VIRTUALENV COMMAND
+if command -v $PYTHON -m venv &>/dev/null; then
+    echo Venv command available
+else
+    echo Venv not available, please install it [For example: python3 -m pip install python-venv]
+    exit 1
+fi
+
+COMMAND=$1
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --python-version)
+            PYTHON_VERSION="$2"
+            shift
+            shift
+        ;;
+        *)
+            COMMAND=$1
+            shift
+            break
+        ;;
+    esac
+    shift
+done
+# CHECK VENV NOT EXISTS
+if [ ! -d .venv ]; then
+    
+    $PYTHON -m venv .venv
+    if [ ! -d .pip ]; then
+        mkdir .pip
+        curl https://bootstrap.pypa.io/get-pip.py -o .pip/get-pip.py
+    fi
+    .venv/bin/python3 .pip/get-pip.py
+    .venv/bin/pip3 install -r requirements.txt
+    .venv/bin/pip3 install -r 'requirements[optional].txt'
+fi
+
+if [ -f '.env' ]; then
+    echo Use .env file to read sensitive information
+    while IPS='=' read -r key _; do
+        eval "${key}"
+    done <'.env'
+else
+    # REGENERATE SENSITIVE INFO FROM TEMPLATE
+    cat >'.env' <<EOF
+DJANGO_SECRET_KEY='django-insecure-fl-)+d7g6a@xcjqckh+^eggbx%2)+0fo(^!4npta)xb#4ab6#9'
+PYTHONPATH=.
+HTTP_PORT=8034
+DOCKER_TAG_SUFFIX=
+PHYTOLEX_GIT_USERNAME_AND_TOKEN_SEPARATED_BY_COLON=
+APPLICATION_URL_CONTEXT=/
+EOF
+fi
+
+echo EXECUTE
+echo "=========== $COMMAND"
+echo "$COMMAND ==========="
+echo COMMAND
+
+# SERVICES=(  )
+
+if [ "$COMMAND" == "manage" ]; then
+    echo Run manage.py script manage.py "$@"
+    # Sample: ./buildew manage loaddata app_moods/fixtures/geometry_shapes.yaml
+    DJANGO_SECRET_KEY=$(.venv/bin/python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+    export DJANGO_SECRET_KEY
+    export DJANGO_DEBUG=True
+    export PYTHONPATH=${PYTHONPATH}
+    
+    .venv/bin/python3 manage.py "$@"
+fi
+
+if [ "$COMMAND" == "redeps" ]; then
+    echo "Reinstall dependencies"
+    .venv/bin/pip3 install -r requirements.txt
+    .venv/bin/pip3 install -r 'requirements[optional].txt'
+fi
+
+if [ "$COMMAND" == "clean" ]; then
+    echo "Clean temporary folders"
+    find . -name __pycache__ -print0 | xargs -0 rm -fr
+fi
+
+function create_tmp_file  {
+    # Function set global variable TMP_FILE
+    FOLDER=$1
+    SUFFIX=$2
+    PREFIX=$3
+    TMP_FILE=$(mktemp -q "${FOLDER}/${PREFIX}XXXXXX${SUFFIX}")
+    if [ $? -ne 0 ]; then
+        echo "$0: Can't create temp file, bt template ${FOLDER}/${PREFIX}XXXXXX${SUFFIX}  ..."
+        exit 1
+    fi
+}
+
+function dump_database_to_json {
+    SERVICE=phytonium
+    SERVICE_IMAGE_NAME=mast.eu.spb.ru/${SERVICE}:v1${DOCKER_TAG_SUFFIX}
+    docker_build "$SERVICE_IMAGE_NAME" 'Dockerfile' '.' || exit 1
+    
+    docker-compose up --wait postgresdb
+    # Remove container if it is running
+    
+    DOCKER_COMPOSE_NETWORK=${PWD##*/}_default
+    echo Docker compose network is "$DOCKER_COMPOSE_NETWORK"
+
+    APPLICATIONS="phytonyms"    
+    for app in $APPLICATIONS; do
+
+        create_tmp_file "/tmp" ".json" "dump-db.${app}."
+
+        docker run \
+        --network="${DOCKER_COMPOSE_NETWORK}" \
+        --env DJANGO_PRODUCTION=True \
+        --env DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
+        --mount type=bind,source="${PWD}/.logs/${SERVICE},destination=/var/log" \
+        --mount type=bind,source="${PWD}/.tmp/${SERVICE},destination=/tmp" \
+        "${SERVICE_IMAGE_NAME}" python3 manage.py dumpdata "$app"  > "${TMP_FILE}" || exit 1
+
+        # mv "${PWD}/.tmp/${SERVICE}${TMP_FILE}" "${TMP_FILE}"
+        gzip "${TMP_FILE}"
+
+        echo Database dump stored to the file: "${TMP_FILE}.gz"
+    done
+}
+
+if [ "$COMMAND" == "dump" ] ; then
+    dump_database_to_json
+fi
+
+if [ "$COMMAND" == "log" ] ; then
+    echo 'Show logs'
+    docker-compose logs -f "$@"
+fi
+if [ "$COMMAND" == "logs" ] ; then
+    echo 'Show logs with timestamp'
+    docker-compose logs -f --timestamps "$@"
+fi
+
+if [ "$COMMAND" == "save-db-structure-as-png" ] ; then
+    if command dot -V &>/dev/null; then
+        echo dot command available
+    else
+        echo dot command not available, please install it [For example: sudo apt install graphviz]
+        exit 1
+    fi
+    .venv/bin/pip3 install pygraphviz
+    .venv/bin/pip3 install pyparsing pydot
+    .venv/bin/pip3 install django_extensions
+    
+    TMP_FOLDER="$(mktemp -d /tmp/buildew.XXXXXXXXX)" || exit 1
+    TMP_PACKAGE="$(mktemp -d "${TMP_FOLDER}"/pXXXXXXXXX)" || exit 1
+    PACKAGE_NAME=$(basename "$TMP_PACKAGE")
+    
+    cp phytonium/*.py "$TMP_PACKAGE"
+    { cat phytonium/settings.py;
+    echo "";
+    echo "# ADDITIONAL APPLICATION";
+    echo "if not ('django_extensions' in INSTALLED_APPS):";
+    echo "    INSTALLED_APPS.append('django_extensions')"; } > "$TMP_PACKAGE/tmp_settings.py"
+    
+    PYTHONPATH=.:$TMP_FOLDER DJANGO_SETTINGS_MODULE=$PACKAGE_NAME.tmp_settings .venv/bin/python3 manage.py graph_models -a -g -o db.structure.png
+    
+    rm -fr "$TMP_FOLDER"
+fi
+
+# =================================================================================================
+
+AVAILABLE_COMMANDS="run build drun up start stop down finish restart manage redeps restart clean dump log logs save-db-structure-as-png"
+echo ''
+[[ $AVAILABLE_COMMANDS =~ (^| )$COMMAND($| ) ]] && echo 'Ok' || echo 'Unknown command: ' "$COMMAND" && echo 'Available commands are: ' "$AVAILABLE_COMMANDS"
