@@ -169,17 +169,18 @@ def convert_argument(
 
         kwargs = {}
 
-        for field in type_definition.fields:
-            value = cast(Mapping, value)
-            graphql_name = config.name_converter.from_field(field)
-
-            if graphql_name in value:
-                kwargs[field.python_name] = convert_argument(
-                    value[graphql_name], field.type, scalar_registry, config
-                )
+        type_definition_field_index = {config.name_converter.from_field(field): field for field in type_definition.fields}
+        for graphql_name, entry_value in value.items():
+            field = type_definition_field_index.get(graphql_name)
+            assert field
+            kwargs[field.python_name] = convert_argument(
+                entry_value, field.type, scalar_registry, config
+            )
 
         type_ = cast(type, type_)
-        return type_(**kwargs)
+        instance_ = type_(**kwargs)
+        instance_._kwargs_order = [key for key in kwargs]
+        return instance_
 
     raise UnsupportedTypeError(type_)
 
