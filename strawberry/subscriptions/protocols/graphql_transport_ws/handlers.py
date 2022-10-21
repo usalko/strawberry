@@ -10,7 +10,7 @@ from graphql import (
     GraphQLSyntaxError,
     parse,
 )
-from graphql.error.graphql_error import format_error as format_graphql_error
+from graphql.error.graphql_error import GraphQLFormattedError
 
 from strawberry.schema import BaseSchema
 from strawberry.subscriptions.protocols.graphql_transport_ws.types import (
@@ -195,7 +195,7 @@ class BaseGraphQLTransportWSHandler(ABC):
         # Handle initial validation errors
         if isinstance(result_source, GraphQLExecutionResult):
             assert result_source.errors
-            payload = [format_graphql_error(result_source.errors[0])]
+            payload = [GraphQLFormattedError(result_source.errors[0])]
             await self.send_message(ErrorMessage(id=message.id, payload=payload))
             self.schema.process_errors(result_source.errors)
             return
