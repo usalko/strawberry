@@ -245,7 +245,7 @@ class BaseGraphQLTransportWSHandler(ABC):
         try:
             async for result in result_source:
                 if result.errors:
-                    error_payload = [format_graphql_error(err) for err in result.errors]
+                    error_payload = [GraphQLFormattedError(err) for err in result.errors]
                     error_message = ErrorMessage(id=operation_id, payload=error_payload)
                     await self.send_message(error_message)
                     self.schema.process_errors(result.errors)
@@ -261,7 +261,7 @@ class BaseGraphQLTransportWSHandler(ABC):
             # GraphQLErrors are handled by graphql-core and included in the
             # ExecutionResult
             error = GraphQLError(str(error), original_error=error)
-            error_payload = [format_graphql_error(error)]
+            error_payload = [GraphQLFormattedError(error)]
             error_message = ErrorMessage(id=operation_id, payload=error_payload)
             await self.send_message(error_message)
             self.schema.process_errors([error])
