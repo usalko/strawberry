@@ -119,7 +119,7 @@ from strawberry.aiohttp.views import GraphQLView
 from strawberry.http import GraphQLHTTPResponse
 from strawberry.types import ExecutionResult
 
-from graphql.error.graphql_error import format_error as format_graphql_error
+from graphql.error.graphql_error import GraphQLFormattedError
 
 
 class MyGraphQLView(GraphQLView):
@@ -129,7 +129,7 @@ class MyGraphQLView(GraphQLView):
         data: GraphQLHTTPResponse = {"data": result.data}
 
         if result.errors:
-            data["errors"] = [format_graphql_error(err) for err in result.errors]
+            data["errors"] = [GraphQLFormattedError(err) for err in result.errors]
 
         return data
 ```
