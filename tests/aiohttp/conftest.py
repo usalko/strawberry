@@ -1,5 +1,4 @@
 import pytest
-
 import pytest_asyncio
 
 from strawberry.aiohttp.test.client import GraphQLTestClient

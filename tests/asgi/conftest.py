@@ -1,7 +1,6 @@
 import pathlib
 
 import pytest
-
 from starlette.testclient import TestClient
 
 from strawberry.asgi.test import GraphQLTestClient

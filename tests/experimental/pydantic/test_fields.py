@@ -1,11 +1,10 @@
 import re
 from typing import List
-
-import pytest
+from typing_extensions import Literal
 
 import pydantic
+import pytest
 from pydantic import BaseModel, ValidationError, conlist
-from typing_extensions import Literal
 
 import strawberry
 from strawberry.type import StrawberryOptional
@@ -87,6 +86,23 @@ def test_conint():
 
     assert field.python_name == "field"
     assert field.type is int
+
+
+def test_confloat():
+    class Model(pydantic.BaseModel):
+        field: pydantic.confloat(lt=100.5)
+
+    @strawberry.experimental.pydantic.type(Model)
+    class Type:
+        field: strawberry.auto
+
+    definition: TypeDefinition = Type._type_definition
+    assert definition.name == "Type"
+
+    [field] = definition.fields
+
+    assert field.python_name == "field"
+    assert field.type is float
 
 
 def test_constr():
