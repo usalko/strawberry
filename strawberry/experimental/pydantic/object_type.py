@@ -16,9 +16,6 @@ from typing import (
     cast,
 )
 
-from graphql import GraphQLResolveInfo
-from pydantic.fields import ModelField
-
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.auto import StrawberryAuto
 from strawberry.experimental.pydantic.conversion import (
@@ -37,6 +34,10 @@ from strawberry.field import StrawberryField
 from strawberry.object_type import _process_type, _wrap_dataclass
 from strawberry.types.type_resolver import _get_fields
 from strawberry.utils.dataclasses import add_custom_init_fn
+
+if TYPE_CHECKING:
+    from graphql import GraphQLResolveInfo
+    from pydantic.fields import ModelField
 
 
 def get_type_for_field(field: ModelField, is_input: bool):
@@ -213,6 +214,9 @@ def type(
             namespace["from_pydantic"] = cls.from_pydantic
         if has_custom_to_pydantic:
             namespace["to_pydantic"] = cls.to_pydantic
+
+        if hasattr(cls, "resolve_reference"):
+            namespace["resolve_reference"] = cls.resolve_reference
 
         kwargs: Dict[str, object] = {}
 

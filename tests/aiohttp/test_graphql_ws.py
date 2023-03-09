@@ -16,7 +16,7 @@ from strawberry.subscriptions.protocols.graphql_ws import (
     GQL_STOP,
 )
 from tests.aiohttp.app import create_app
-from tests.aiohttp.schema import schema
+from tests.views.schema import schema
 
 
 async def test_simple_subscription(aiohttp_client):
@@ -572,7 +572,7 @@ async def test_task_cancellation_separation(aiohttp_client):
         await ws1.send_json({"type": GQL_STOP, "id": "demo"})
         await ws1.send_json({"type": GQL_CONNECTION_TERMINATE})
 
-        async for msg in ws1:
+        async for _msg in ws1:
             # Receive all outstanding messages including the final close message
             pass
 
@@ -581,7 +581,7 @@ async def test_task_cancellation_separation(aiohttp_client):
         await ws2.send_json({"type": GQL_STOP, "id": "demo"})
         await ws2.send_json({"type": GQL_CONNECTION_TERMINATE})
 
-        async for msg in ws2:
+        async for _msg in ws2:
             # Receive all outstanding messages including the final close message
             pass
 

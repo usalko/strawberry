@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 from abc import ABC, abstractmethod
 from contextlib import suppress
-from typing import Any, AsyncGenerator, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, cast
 
 from graphql import ExecutionResult as GraphQLExecutionResult
 from graphql import GraphQLError
@@ -9,7 +11,6 @@ from graphql.error.graphql_error import format_error as format_graphql_error
 from graphql.error.graphql_error import GraphQLFormattedError
 
 
-from strawberry.schema import BaseSchema
 from strawberry.subscriptions.protocols.graphql_ws import (
     GQL_COMPLETE,
     GQL_CONNECTION_ACK,
@@ -22,13 +23,16 @@ from strawberry.subscriptions.protocols.graphql_ws import (
     GQL_START,
     GQL_STOP,
 )
-from strawberry.subscriptions.protocols.graphql_ws.types import (
-    ConnectionInitPayload,
-    OperationMessage,
-    OperationMessagePayload,
-    StartPayload,
-)
 from strawberry.utils.debug import pretty_print_graphql_operation
+
+if TYPE_CHECKING:
+    from strawberry.schema import BaseSchema
+    from strawberry.subscriptions.protocols.graphql_ws.types import (
+        ConnectionInitPayload,
+        OperationMessage,
+        OperationMessagePayload,
+        StartPayload,
+    )
 
 
 class BaseGraphQLWSHandler(ABC):
@@ -94,7 +98,7 @@ class BaseGraphQLWSHandler(ABC):
             await self.close()
             return
 
-        payload = cast(Optional[ConnectionInitPayload], payload)
+        payload = cast(Optional["ConnectionInitPayload"], payload)
         self.connection_params = payload
 
         acknowledge_message: OperationMessage = {"type": GQL_CONNECTION_ACK}
@@ -109,7 +113,7 @@ class BaseGraphQLWSHandler(ABC):
 
     async def handle_start(self, message: OperationMessage) -> None:
         operation_id = message["id"]
-        payload = cast(StartPayload, message["payload"])
+        payload = cast("StartPayload", message["payload"])
         query = payload["query"]
         operation_name = payload.get("operationName")
         variables = payload.get("variables")

@@ -35,6 +35,8 @@
 
 ## [Extensions](./extensions)
 
+## [Errors](./errors/)
+
 ## Guides
 
 - [Authentication](./guides/authentication.md)
@@ -52,6 +54,7 @@
 - [Builtin server](./guides/server.md)
 - [Tools](./guides/tools.md)
 - [Schema export](./guides/schema-export.md)
+- [Convert to dictionary](./guides/convert-to-dictionary.md)
 
 ## Editor integration
 
@@ -75,6 +78,13 @@
 - [Chalice](./integrations/chalice.md)
 - [Starlette](./integrations/starlette.md)
 - [Pydantic **experimental**](./integrations/pydantic.md)
+
+## Federation
+
+- [Introduction](./federation/introduction.md)
+- [Entities](./federation/entities.md)
+- [Entity interfaces](./federation/entity-interfaces.md)
+- [Custom directives](./federation/custom_directives.md)
 
 ## Operations
 

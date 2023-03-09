@@ -1,6 +1,395 @@
 CHANGELOG
 =========
 
+0.161.1 - 2023-03-09
+--------------------
+
+Ensure that no other messages follow a "complete" or "error" message
+for an operation in the graphql-transport-ws protocol.
+
+Contributed by [Kristján Valur Jónsson](https://github.com/kristjanvalur) via [PR #2600](https://github.com/strawberry-graphql/strawberry/pull/2600/)
+
+
+0.161.0 - 2023-03-08
+--------------------
+
+Calling `ChannelsConsumer.channel_listen` multiple times will now pass
+along the messages being listened for to multiple callers, rather than
+only one of the callers, which was the old behaviour.
+
+This resolves an issue where creating multiple GraphQL subscriptions
+using a single websocket connection could result in only one of those
+subscriptions (in a non-deterministic order) being triggered if they
+are listening for channel layer messages of the same type.
+
+Contributed by [James Thorniley](https://github.com/jthorniley) via [PR #2525](https://github.com/strawberry-graphql/strawberry/pull/2525/)
+
+
+0.160.0 - 2023-03-08
+--------------------
+
+Rename `Extension` to `SchemaExtension` to pave the way for FieldExtensions.
+Importing `Extension` from `strawberry.extensions` will now raise a deprecation
+warning.
+
+Before:
+
+```python
+from strawberry.extensions import Extension
+```
+
+After:
+
+```python
+from strawberry.extensions import SchemaExtension
+```
+
+Contributed by [Jonathan Kim](https://github.com/jkimbo) via [PR #2574](https://github.com/strawberry-graphql/strawberry/pull/2574/)
+
+
+0.159.1 - 2023-03-07
+--------------------
+
+This releases adds support for Mypy 1.1.1
+
+Contributed by [Patrick Arminio](https://github.com/patrick91) via [PR #2616](https://github.com/strawberry-graphql/strawberry/pull/2616/)
+
+
+0.159.0 - 2023-02-22
+--------------------
+
+This release changes how extension hooks are defined. The new style hooks are
+more flexible and allow to run code before and after the execution.
+
+The old style hooks are still supported but will be removed in future releases.
+
+**Before:**
+
+```python
+def on_executing_start(self):  # Called before the execution start
+    ...
+
+
+def on_executing_end(self):  # Called after the execution ends
+    ...
+```
+
+**After**
+
+```python
+def on_execute(self):
+    #  This part is called before the execution start
+    yield
+    #  This part is called after the execution ends
+```
+
+Contributed by [ניר](https://github.com/nrbnlulu) via [PR #2428](https://github.com/strawberry-graphql/strawberry/pull/2428/)
+
+
+0.158.2 - 2023-02-21
+--------------------
+
+Add a type annotation to `strawberry.fastapi.BaseContext`'s `__init__` method so that
+it can be used without `mypy` raising an error.
+
+Contributed by [Martin Winkel](https://github.com/SaturnFromTitan) via [PR #2581](https://github.com/strawberry-graphql/strawberry/pull/2581/)
+
+
+0.158.1 - 2023-02-19
+--------------------
+
+Version 1.5.10 of GraphiQL disabled introspection for deprecated
+arguments because it wasn't supported by all GraphQL server versions.
+This PR enables it so that deprecated arguments show up again in
+GraphiQL.
+
+Contributed by [Jonathan Kim](https://github.com/jkimbo) via [PR #2575](https://github.com/strawberry-graphql/strawberry/pull/2575/)
+
+
+0.158.0 - 2023-02-18
+--------------------
+
+Throw proper exceptions when Unions are created with invalid types
+
+Previously, using Lazy types inside of Unions would raise unexpected, unhelpful errors.
+
+Contributed by [ignormies](https://github.com/BryceBeagle) via [PR #2540](https://github.com/strawberry-graphql/strawberry/pull/2540/)
+
+
+0.157.0 - 2023-02-18
+--------------------
+
+This releases adds support for Apollo Federation 2.1, 2.2 and 2.3.
+
+This includes support for `@composeDirective` and `@interfaceObject`,
+we expose directives for both, but we also have shortcuts, for example
+to use `@composeDirective` with a custom schema directive, you can do
+the following:
+
+```python
+@strawberry.federation.schema_directive(
+    locations=[Location.OBJECT], name="cacheControl", compose=True
+)
+class CacheControl:
+    max_age: int
+```
+
+The `compose=True` makes so that this directive is included in the supergraph
+schema.
+
+For `@interfaceObject` we introduced a new `@strawberry.federation.interface_object`
+decorator. This works like `@strawberry.federation.type`, but it adds, the appropriate
+directive, for example:
+
+```python
+@strawberry.federation.interface_object(keys=["id"])
+class SomeInterface:
+    id: strawberry.ID
+```
+
+generates the following type:
+
+```graphql
+type SomeInterface @key(fields: "id") @interfaceObject {
+  id: ID!
+}
+```
+
+Contributed by [Patrick Arminio](https://github.com/patrick91) via [PR #2549](https://github.com/strawberry-graphql/strawberry/pull/2549/)
+
+
+0.156.4 - 2023-02-13
+--------------------
+
+This release fixes a regression introduce in version 0.156.2 that
+would make Mypy throw an error in the following code:
+
+```python
+import strawberry
+
+
+@strawberry.type
+class Author:
+    name: str
+
+
+@strawberry.type
+class Query:
+    @strawberry.field
+    async def get_authors(self) -> list[Author]:
+        return [Author(name="Michael Crichton")]
+```
+
+Contributed by [Patrick Arminio](https://github.com/patrick91) via [PR #2535](https://github.com/strawberry-graphql/strawberry/pull/2535/)
+
+
+0.156.3 - 2023-02-10
+--------------------
+
+This release adds support for Mypy 1.0
+
+Contributed by [Patrick Arminio](https://github.com/patrick91) via [PR #2516](https://github.com/strawberry-graphql/strawberry/pull/2516/)
+
+
+0.156.2 - 2023-02-09
+--------------------
+
+This release updates the typing for the resolver argument in
+`strawberry.field`i to support async resolvers.
+This means that now you won't get any type
+error from Pyright when using async resolver, like the following example:
+
+```python
+import strawberry
+
+
+async def get_user_age() -> int:
+    return 0
+
+
+@strawberry.type
+class User:
+    name: str
+    age: int = strawberry.field(resolver=get_user_age)
+```
+
+Contributed by [Patrick Arminio](https://github.com/patrick91) via [PR #2528](https://github.com/strawberry-graphql/strawberry/pull/2528/)
+
+
+0.156.1 - 2023-02-09
+--------------------
+
+Add `GraphQLWebsocketCommunicator` for testing websockets on channels.
+i.e:
+
+```python
+import pytest
+from strawberry.channels.testing import GraphQLWebsocketCommunicator
+from myapp.asgi import application
+
+
+@pytest.fixture
+async def gql_communicator():
+    async with GraphQLWebsocketCommunicator(
+        application=application, path="/graphql"
+    ) as client:
+        yield client
+
+
+async def test_subscribe_echo(gql_communicator):
+    async for res in gql_communicator.subscribe(
+        query='subscription { echo(message: "Hi") }'
+    ):
+        assert res.data == {"echo": "Hi"}
+```
+
+Contributed by [ניר](https://github.com/nrbnlulu) via [PR #2458](https://github.com/strawberry-graphql/strawberry/pull/2458/)
+
+
+0.156.0 - 2023-02-08
+--------------------
+
+This release adds support for specialized generic types.
+Before, the following code would give an error, saying that `T` was not
+provided to the generic type:
+
+```python
+@strawberry.type
+class Foo(Generic[T]):
+    some_var: T
+
+
+@strawberry.type
+class IntFoo(Foo[int]):
+    ...
+
+
+@strawberry.type
+class Query:
+    int_foo: IntFoo
+```
+
+Also, because the type is already specialized, `Int` won't get inserted to its name,
+meaning it will be exported to the schema with a type name of `IntFoo` and not
+`IntIntFoo`.
+
+For example, this query:
+
+```python
+@strawberry.type
+class Query:
+    int_foo: IntFoo
+    str_foo: Foo[str]
+```
+
+Will generate a schema like this:
+
+```graphql
+type IntFoo {
+  someVar: Int!
+}
+
+type StrFoo {
+  someVar: String!
+}
+
+type Query {
+  intFoo: IntFoo!
+  strfoo: StrFoo!
+}
+```
+
+Contributed by [Thiago Bellini Ribeiro](https://github.com/bellini666) via [PR #2517](https://github.com/strawberry-graphql/strawberry/pull/2517/)
+
+
+0.155.4 - 2023-02-06
+--------------------
+
+Fix file not found error when exporting schema with lazy types from CLI #2469
+
+Contributed by [San Kilkis](https://github.com/skilkis) via [PR #2512](https://github.com/strawberry-graphql/strawberry/pull/2512/)
+
+
+0.155.3 - 2023-02-01
+--------------------
+
+Fix missing custom `resolve_reference` for using pydantic with federation
+
+i.e:
+
+```python
+import typing
+from pydantic import BaseModel
+import strawberry
+from strawberry.federation.schema_directives import Key
+
+
+class ProductInDb(BaseModel):
+    upc: str
+    name: str
+
+
+@strawberry.experimental.pydantic.type(
+    model=ProductInDb, directives=[Key(fields="upc", resolvable=True)]
+)
+class Product:
+    upc: str
+    name: str
+
+    @classmethod
+    def resolve_reference(cls, upc):
+        return Product(upc=upc, name="")
+```
+
+Contributed by [filwaline](https://github.com/filwaline) via [PR #2503](https://github.com/strawberry-graphql/strawberry/pull/2503/)
+
+
+0.155.2 - 2023-01-25
+--------------------
+
+This release fixes a bug in subscriptions using the graphql-transport-ws protocol
+where the conversion of the NextMessage object to a dictionary took an unnecessary
+amount of time leading to an increase in CPU usage.
+
+Contributed by [rjwills28](https://github.com/rjwills28) via [PR #2481](https://github.com/strawberry-graphql/strawberry/pull/2481/)
+
+
+0.155.1 - 2023-01-24
+--------------------
+
+A link to the changelog has been added to the package metadata, so it shows up on PyPI.
+
+Contributed by [Tom Most](https://github.com/twm) via [PR #2490](https://github.com/strawberry-graphql/strawberry/pull/2490/)
+
+
+0.155.0 - 2023-01-23
+--------------------
+
+This release adds a new utility function to convert a Strawberry object to a
+dictionary.
+
+You can use `strawberry.asdict(...)` function to convert a Strawberry object to
+a dictionary:
+
+```python
+@strawberry.type
+class User:
+    name: str
+    age: int
+
+
+# should be {"name": "Lorem", "age": 25}
+user_dict = strawberry.asdict(User(name="Lorem", age=25))
+```
+
+> Note: This function uses the `dataclasses.asdict` function under the hood, so
+> you can safely replace `dataclasses.asdict` with `strawberry.asdict` in your
+> code. This will make it easier to update your code to newer versions of
+> Strawberry if we decide to change the implementation.
+
+Contributed by [Haze Lee](https://github.com/Hazealign) via [PR #2417](https://github.com/strawberry-graphql/strawberry/pull/2417/)
+
+
 0.154.1 - 2023-01-17
 --------------------
 
@@ -3396,7 +3785,7 @@ from django.test.client import Client
 from strawberry.django.test import GraphQLTestClient
 
 
-@pytest.fixture()
+@pytest.fixture
 def graphql_client():
     yield GraphQLTestClient(Client())
 ```

@@ -1,4 +1,5 @@
-import builtins
+from __future__ import annotations
+
 import dataclasses
 import inspect
 import sys
@@ -7,6 +8,7 @@ from typing import (
     Any,
     Awaitable,
     Callable,
+    Coroutine,
     Dict,
     List,
     Mapping,
@@ -17,21 +19,24 @@ from typing import (
     Union,
     overload,
 )
-from typing_extensions import Literal
 
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument
 from strawberry.exceptions import InvalidArgumentTypeError, InvalidDefaultFactoryError
 from strawberry.type import StrawberryType
-from strawberry.types.info import Info
 from strawberry.union import StrawberryUnion
 from strawberry.utils.cached_property import cached_property
 
-from .permission import BasePermission
 from .types.fields.resolver import StrawberryResolver
 
 if TYPE_CHECKING:
+    import builtins
+    from typing_extensions import Literal
+
+    from strawberry.arguments import StrawberryArgument
+    from strawberry.types.info import Info
+
     from .object_type import TypeDefinition
+    from .permission import BasePermission
 
 T = TypeVar("T")
 
@@ -39,6 +44,9 @@ T = TypeVar("T")
 _RESOLVER_TYPE = Union[
     StrawberryResolver[T],
     Callable[..., T],
+    # we initially used Awaitable, but that was triggering the following mypy bug:
+    # https://github.com/python/mypy/issues/14669
+    Callable[..., Coroutine[T, Any, Any]],
     "staticmethod[T]",
     "classmethod[T]",
 ]
@@ -60,7 +68,6 @@ def _is_generic(resolver_type: Union[StrawberryType, type]) -> bool:
 
 
 class StrawberryField(dataclasses.Field):
-    python_name: str
     type_annotation: Optional[StrawberryAnnotation]
     default_resolver: Callable[[Any, str], object] = getattr
 
@@ -131,7 +138,7 @@ class StrawberryField(dataclasses.Field):
 
         self.deprecation_reason = deprecation_reason
 
-    def __call__(self, resolver: _RESOLVER_TYPE) -> "StrawberryField":
+    def __call__(self, resolver: _RESOLVER_TYPE) -> StrawberryField:
         """Add a resolver to the field"""
 
         # Allow for StrawberryResolvers or bare functions to be provided
@@ -201,10 +208,7 @@ class StrawberryField(dataclasses.Field):
     def _set_python_name(self, name: str) -> None:
         self.name = name
 
-    # using the function syntax for property here in order to make it easier
-    # to ignore this mypy error:
-    # https://github.com/python/mypy/issues/4125
-    python_name = property(_python_name, _set_python_name)  # type: ignore
+    python_name: str = property(_python_name, _set_python_name)  # type: ignore[assignment]  # noqa: E501
 
     @property
     def base_resolver(self) -> Optional[StrawberryResolver]:
@@ -245,7 +249,6 @@ class StrawberryField(dataclasses.Field):
             if self.base_resolver is not None:
                 # Handle unannotated functions (such as lambdas)
                 if self.base_resolver.type is not None:
-
                     # Generics will raise MissingTypesForGenericError later
                     # on if we let it be returned. So use `type_annotation` instead
                     # which is the same behaviour as having no type information.
@@ -289,7 +292,7 @@ class StrawberryField(dataclasses.Field):
 
     def copy_with(
         self, type_var_map: Mapping[TypeVar, Union[StrawberryType, builtins.type]]
-    ) -> "StrawberryField":
+    ) -> StrawberryField:
         new_type: Union[StrawberryType, type] = self.type
 
         # TODO: Remove with creation of StrawberryObject. Will act same as other
