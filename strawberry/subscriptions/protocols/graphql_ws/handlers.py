@@ -135,14 +135,14 @@ class BaseGraphQLWSHandler(ABC):
                 root_value=root_value,
             )
         except GraphQLError as error:
-            error_payload = GraphQLFormattedError(error)
+            error_payload = error.formatted
             await self.send_message(GQL_ERROR, operation_id, error_payload)
             self.schema.process_errors([error])
             return
 
         if isinstance(result_source, GraphQLExecutionResult):
             assert result_source.errors
-            error_payload = GraphQLFormattedError(result_source.errors[0])
+            error_payload = result_source.errors[0].formatted
             await self.send_message(GQL_ERROR, operation_id, error_payload)
             self.schema.process_errors(result_source.errors)
             return
@@ -171,7 +171,7 @@ class BaseGraphQLWSHandler(ABC):
                 payload = {"data": result.data}
                 if result.errors:
                     payload["errors"] = [
-                        GraphQLFormattedError(err) for err in result.errors
+                        err.formatted for err in result.errors
                     ]
                 await self.send_message(GQL_DATA, operation_id, payload)
                 # log errors after send_message to prevent potential
@@ -188,7 +188,7 @@ class BaseGraphQLWSHandler(ABC):
             await self.send_message(
                 GQL_DATA,
                 operation_id,
-                {"data": None, "errors": [GraphQLFormattedError(error)]},
+                {"data": None, "errors": [error.formatted]},
             )
             self.schema.process_errors([error])
 

@@ -210,7 +210,7 @@ class BaseGraphQLTransportWSHandler(ABC):
         # Handle initial validation errors
         if isinstance(result_source, GraphQLExecutionResult):
             assert result_source.errors
-            payload = [GraphQLFormattedError(result_source.errors[0])]
+            payload = [result_source.errors[0].formatted]
             await self.send_message(ErrorMessage(id=message.id, payload=payload))
             self.schema.process_errors(result_source.errors)
             return
