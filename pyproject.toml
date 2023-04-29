@@ -36,7 +36,7 @@ build-backend = "poetry.masonry.api"
 [tool.poetry.dependencies]
 python = "^3.7"
 
-graphql-core = { git = "https://github.com/usalko/graphql-core.git", branch = "fix-fields-order" }
+graphql-core = { git = "https://github.com/usalko/graphql-core.git", branch = "march23" }
 typing_extensions = ">=3.7.4,<5.0.0"
 python-dateutil = "^2.7.0"
 

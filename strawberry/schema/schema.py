@@ -23,7 +23,7 @@ from graphql import (
     parse,
     validate_schema,
 )
-from graphql.execution.subscribe import subscribe
+from graphql.execution import subscribe
 from graphql.type.directives import specified_directives
 
 from strawberry.annotation import StrawberryAnnotation
