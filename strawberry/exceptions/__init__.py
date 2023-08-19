@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Set, Union
 
 from graphql import GraphQLError
-
-from strawberry.utils.cached_property import cached_property
 
 from .duplicated_type_name import DuplicatedTypeName
 from .exception import StrawberryException, UnableToFindExceptionSource
@@ -73,9 +72,7 @@ class MissingTypesForGenericError(Exception):
     """Raised when a generic types was used without passing any type."""
 
     def __init__(self, annotation: Union[StrawberryType, type]):
-        message = (
-            f'The type "{repr(annotation)}" is generic, but no type has been passed'
-        )
+        message = f'The type "{annotation!r}" is generic, but no type has been passed'
 
         super().__init__(message)
 

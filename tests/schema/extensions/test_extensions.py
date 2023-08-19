@@ -2,7 +2,7 @@ import contextlib
 import dataclasses
 import json
 import warnings
-from typing import List, Optional, Set, Type
+from typing import Any, List, Optional, Set, Type
 from unittest.mock import patch
 
 import pytest
@@ -192,7 +192,7 @@ class DefaultSchemaQuery:
 
 
 class ExampleExtension(SchemaExtension):
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__(**kwargs)
         cls.called_hooks = set()
 
@@ -267,7 +267,7 @@ def async_extension() -> Type[ExampleExtension]:
             self.called_hooks.add(9)
             return {"example": "example"}
 
-        async def resolve(self, _next, root, info, *args, **kwargs):
+        async def resolve(self, _next, root, info, *args: str, **kwargs: Any):
             self.called_hooks.add(10)
             return _next(root, info, *args, **kwargs)
 
@@ -301,7 +301,7 @@ def sync_extension() -> Type[ExampleExtension]:
             self.called_hooks.add(9)
             return {"example": "example"}
 
-        def resolve(self, _next, root, info, *args, **kwargs):
+        def resolve(self, _next, root, info, *args: str, **kwargs: Any):
             self.called_hooks.add(10)
             return _next(root, info, *args, **kwargs)
 
@@ -473,6 +473,11 @@ def test_raise_if_defined_both_legacy_and_new_style(default_query_types_and_quer
 
 async def test_legacy_extension_supported():
     with warnings.catch_warnings(record=True) as w:
+        warnings.filterwarnings(
+            "ignore",
+            category=DeprecationWarning,
+            message=r"'.*' is deprecated and slated for removal in Python 3\.\d+",
+        )
 
         class CompatExtension(ExampleExtension):
             async def on_request_start(self):
@@ -521,6 +526,11 @@ async def test_legacy_extension_supported():
 
 async def test_legacy_only_start():
     with warnings.catch_warnings(record=True) as w:
+        warnings.filterwarnings(
+            "ignore",
+            category=DeprecationWarning,
+            message=r"'.*' is deprecated and slated for removal in Python 3\.\d+",
+        )
 
         class CompatExtension(ExampleExtension):
             expected = {1, 2, 3, 4}
@@ -559,6 +569,11 @@ async def test_legacy_only_start():
 
 async def test_legacy_only_end():
     with warnings.catch_warnings(record=True) as w:
+        warnings.filterwarnings(
+            "ignore",
+            category=DeprecationWarning,
+            message=r"'.*' is deprecated and slated for removal in Python 3\.\d+",
+        )
 
         class CompatExtension(ExampleExtension):
             async def on_request_end(self):

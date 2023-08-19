@@ -7,9 +7,6 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, cast
 
 from graphql import ExecutionResult as GraphQLExecutionResult
 from graphql import GraphQLError
-from graphql.error.graphql_error import format_error as format_graphql_error
-from graphql.error.graphql_error import GraphQLFormattedError
-
 
 from strawberry.subscriptions.protocols.graphql_ws import (
     GQL_COMPLETE,
@@ -170,9 +167,7 @@ class BaseGraphQLWSHandler(ABC):
             async for result in result_source:
                 payload = {"data": result.data}
                 if result.errors:
-                    payload["errors"] = [
-                        err.formatted for err in result.errors
-                    ]
+                    payload["errors"] = [err.formatted for err in result.errors]
                 await self.send_message(GQL_DATA, operation_id, payload)
                 # log errors after send_message to prevent potential
                 # slowdown of sending result

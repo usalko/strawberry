@@ -16,7 +16,8 @@ def test_execution_context_operation_name_and_type():
     operation_type = None
 
     class MyExtension(SchemaExtension):
-        def on_request_end(self):
+        def on_operation(self):
+            yield
             nonlocal operation_name
             nonlocal operation_type
 
@@ -59,7 +60,8 @@ def test_execution_context_operation_type_mutation():
     operation_type = None
 
     class MyExtension(SchemaExtension):
-        def on_request_end(self):
+        def on_operation(self):
+            yield
             nonlocal operation_name
             nonlocal operation_type
 
@@ -108,7 +110,8 @@ def test_execution_context_operation_name_and_type_with_fragments():
     operation_type = None
 
     class MyExtension(SchemaExtension):
-        def on_request_end(self):
+        def on_operation(self):
+            yield
             nonlocal operation_name
             nonlocal operation_type
 
@@ -143,7 +146,7 @@ def test_error_when_accessing_operation_type_before_parsing():
             execution_context = self.execution_context
 
             # This should raise a RuntimeError
-            execution_context.operation_type  # noqa: B018
+            execution_context.operation_type
 
     schema = strawberry.Schema(Query, extensions=[MyExtension])
 
@@ -153,11 +156,12 @@ def test_error_when_accessing_operation_type_before_parsing():
 
 def test_error_when_accessing_operation_type_with_invalid_operation_name():
     class MyExtension(SchemaExtension):
-        def on_parsing_end(self):
+        def on_parse(self):
+            yield
             execution_context = self.execution_context
 
             # This should raise a RuntimeError
-            execution_context.operation_type  # noqa: B018
+            execution_context.operation_type
 
     schema = strawberry.Schema(Query, extensions=[MyExtension])
 

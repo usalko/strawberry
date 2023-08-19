@@ -156,7 +156,7 @@ class HttpClient(abc.ABC):
         files_map: Dict[str, List[str]] = {}
         for key, values in variables.items():
             if isinstance(values, dict):
-                folder_key = list(values.keys())[0]
+                folder_key = next(iter(values.keys()))
                 key += f".{folder_key}"  # noqa: PLW2901
                 # the list of file is inside the folder keyword
                 values = values[folder_key]  # noqa: PLW2901
@@ -166,7 +166,7 @@ class HttpClient(abc.ABC):
                 # copying `files` as when we map a file we must discard from the dict
                 _kwargs = files.copy()
                 for index, _ in enumerate(values):
-                    k = list(_kwargs.keys())[0]
+                    k = next(iter(_kwargs.keys()))
                     _kwargs.pop(k)
                     files_map.setdefault(k, [])
                     files_map[k].append(f"variables.{key}.{index}")
@@ -243,18 +243,35 @@ class WebSocketClient(abc.ABC):
 
 
 class DebuggableGraphQLTransportWSMixin:
+    @staticmethod
+    def on_init(self):
+        """
+        This method can be patched by unittests to get the instance of the
+        transport handler when it is initialized
+        """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        DebuggableGraphQLTransportWSMixin.on_init(self)
+
+    def get_tasks(self) -> List:
+        return [op.task for op in self.operations.values()]
+
     async def get_context(self) -> object:
         context = await super().get_context()
         context["ws"] = self._ws
-        context["tasks"] = self.tasks
+        context["get_tasks"] = self.get_tasks
         context["connectionInitTimeoutTask"] = self.connection_init_timeout_task
         return context
 
 
 class DebuggableGraphQLWSMixin:
+    def get_tasks(self) -> List:
+        return list(self.tasks.values())
+
     async def get_context(self) -> object:
         context = await super().get_context()
         context["ws"] = self._ws
-        context["tasks"] = self.tasks
+        context["get_tasks"] = self.get_tasks
         context["connectionInitTimeoutTask"] = None
         return context

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from copy import copy
-from functools import partial
+from functools import cached_property, partial
 from itertools import chain
 from typing import (
     TYPE_CHECKING,
@@ -30,8 +30,7 @@ from graphql.type.definition import GraphQLArgument
 
 from strawberry.printer import print_schema
 from strawberry.schema import Schema as BaseSchema
-from strawberry.types.types import TypeDefinition
-from strawberry.utils.cached_property import cached_property
+from strawberry.types.types import StrawberryObjectDefinition
 from strawberry.utils.inspect import get_func_args
 
 from .schema_directive import StrawberryFederationSchemaDirective
@@ -147,8 +146,8 @@ class Schema(BaseSchema):
         )
 
         # TODO: this should be probably done in merge_types
-        if query._type_definition.extend:
-            query_type._type_definition.extend = True  # type: ignore
+        if query.__strawberry_definition__.extend:
+            query_type.__strawberry_definition__.extend = True  # type: ignore
 
         return query_type
 
@@ -171,14 +170,16 @@ class Schema(BaseSchema):
         self._schema.query_type = query_type
         self._schema.type_map[query_type.name] = query_type
 
-    def entities_resolver(self, root, info, representations) -> List[object]:
+    def entities_resolver(
+        self, root, info, representations  # noqa: ANN001
+    ) -> List[object]:
         results = []
 
         for representation in representations:
             type_name = representation.pop("__typename")
             type_ = self.schema_converter.type_map[type_name]
 
-            definition = cast(TypeDefinition, type_.definition)
+            definition = cast(StrawberryObjectDefinition, type_.definition)
 
             if hasattr(definition.origin, "resolve_reference"):
                 resolve_reference = definition.origin.resolve_reference
@@ -208,7 +209,7 @@ class Schema(BaseSchema):
 
             try:
                 result = get_result()
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203
                 result = GraphQLError(
                     f"Unable to resolve reference for {definition.origin}",
                     original_error=e,
@@ -371,8 +372,8 @@ def _get_entity_type(type_map: "TypeMap"):
 
     entity_type = GraphQLUnionType("_Entity", federation_key_types)  # type: ignore
 
-    def _resolve_type(self, value, _type):
-        return self._type_definition.name
+    def _resolve_type(self, value, _type):  # noqa: ANN001
+        return self.__strawberry_definition__.name
 
     entity_type.resolve_type = _resolve_type
 
@@ -387,10 +388,13 @@ def _is_key(directive: Any) -> bool:
 
 def _has_federation_keys(
     definition: Union[
-        TypeDefinition, "ScalarDefinition", "EnumDefinition", "StrawberryUnion"
+        StrawberryObjectDefinition,
+        "ScalarDefinition",
+        "EnumDefinition",
+        "StrawberryUnion",
     ]
 ) -> bool:
-    if isinstance(definition, TypeDefinition):
+    if isinstance(definition, StrawberryObjectDefinition):
         return any(_is_key(directive) for directive in definition.directives or [])
 
     return False

@@ -1,7 +1,4 @@
-import sys
 from typing import Any, Dict
-
-import pytest
 
 import strawberry
 
@@ -13,11 +10,6 @@ try:
     from tests.starlite.app import create_app
 except ModuleNotFoundError:
     pass
-
-
-pytestmark = pytest.mark.skipif(
-    sys.version_info < (3, 8), reason="requires python3.8 or higher"
-)
 
 
 def test_base_context():
@@ -135,7 +127,7 @@ def test_with_invalid_context_getter():
         dependencies={"custom_context_dependency": Provide(custom_context_dependency)},
     )
     test_client = TestClient(app, raise_server_exceptions=True)
-    # FIXME:
+    # TODO: test exception message
     # assert starlite.exceptions.http_exceptions.InternalServerException is raised
     # with pytest.raises(
     #     InternalServerException,

@@ -5,11 +5,13 @@ import pydantic
 
 import strawberry
 from strawberry.printer import print_schema
+from tests.experimental.pydantic.utils import needs_pydantic_v2
 
 
 def test_field_type_default():
     class User(pydantic.BaseModel):
         name: str = "James"
+        nickname: Optional[str] = "Jim"
 
     @strawberry.experimental.pydantic.type(User, all_fields=True)
     class PydanticUser:
@@ -35,6 +37,7 @@ def test_field_type_default():
     expected = """
     type PydanticUser {
       name: String!
+      nickname: String
     }
 
     type Query {
@@ -150,6 +153,37 @@ def test_input_type_default():
 
     input StrawberryUser {
       name: String! = "James"
+    }
+    """
+
+    assert print_schema(schema) == textwrap.dedent(expected).strip()
+
+
+@needs_pydantic_v2
+def test_v2_explicit_default():
+    class User(pydantic.BaseModel):
+        name: Optional[str]
+
+    @strawberry.experimental.pydantic.type(User, all_fields=True)
+    class PydanticUser:
+        ...
+
+    @strawberry.type
+    class Query:
+        @strawberry.field
+        def a(self) -> PydanticUser:
+            raise NotImplementedError
+
+    schema = strawberry.Schema(Query)
+
+    # name should have no default
+    expected = """
+    type PydanticUser {
+      name: String
+    }
+
+    type Query {
+      a: PydanticUser!
     }
     """
 

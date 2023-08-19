@@ -6,7 +6,7 @@ import functools
 import json
 import urllib.parse
 from io import BytesIO
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 from typing_extensions import Literal
 
 from flask import Flask
@@ -29,11 +29,12 @@ class GraphQLView(BaseGraphQLView):
 
     result_override: ResultOverrideFunction = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: str, **kwargs: Any):
         self.result_override = kwargs.pop("result_override")
         super().__init__(*args, **kwargs)
 
     def get_root_value(self, request: FlaskRequest) -> object:
+        super().get_root_value(request)  # for coverage
         return Query()
 
     def get_context(
@@ -82,7 +83,7 @@ class FlaskHttpClient(HttpClient):
         variables: Optional[Dict[str, object]] = None,
         files: Optional[Dict[str, BytesIO]] = None,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Response:
         body = self._build_body(
             query=query, variables=variables, files=files, method=method
@@ -112,7 +113,7 @@ class FlaskHttpClient(HttpClient):
         url: str,
         method: Literal["get", "post", "patch", "put", "delete"],
         headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         with self.app.test_client() as client:
             response = getattr(client, method)(url, headers=headers, **kwargs)
@@ -128,7 +129,7 @@ class FlaskHttpClient(HttpClient):
         url: str,
         method: Literal["get", "post", "patch", "put", "delete"],
         headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Response:
         loop = asyncio.get_running_loop()
         ctx = contextvars.copy_context()
