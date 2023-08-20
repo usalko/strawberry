@@ -23,7 +23,7 @@ from .base import BaseView
 from .exceptions import HTTPException
 from .types import HTTPMethod, QueryParams
 from .typevars import Context, Request, Response, RootValue, SubResponse
-
+from logging import error
 
 class SyncHTTPRequestAdapter(abc.ABC):
     @property
@@ -197,6 +197,9 @@ class SyncBaseHTTPView(
             ) from e
         except MissingQueryError as e:
             raise HTTPException(400, "No GraphQL query found in the request") from e
+        except BaseException as e:
+            error(e, exc_info=True)
+            raise e
 
         response_data = self.process_result(request=request, result=result)
 
